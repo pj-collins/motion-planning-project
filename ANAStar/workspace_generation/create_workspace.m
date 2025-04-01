@@ -3,6 +3,14 @@
 clear all
 close all
 
+%% Parameters
+
+% Plot edges if desired (can take awhile)
+edge_plot_flag = true;
+
+% Create edge and node txt files
+create_files = true;
+
 %% Define workspace obstacles
 
 % Set workspace limits (2D euclidean space)
@@ -13,8 +21,8 @@ params.y_range = params.y_max - params.y_min;
 
 % Define rectangular obstacles as 4-element vector v = [x1, x2, y1, y2]
 % where x2 > x1, y2 > y1
-n_obs = 7;
-obstacles = zeros(n_obs, 4);
+num_obs = 7;
+obstacles = zeros(num_obs, 4);
 
 % Obstacles
 obstacles(1,:) = add_obstacle(0.1,0.3,0.2,0.3,params);
@@ -44,7 +52,7 @@ y_set = params.y_min:node_resolution:params.y_max;
 
 % Define empty node set
 nodes = [];
-id = 0;
+id = 1;
 
 % Iterate through all possible nodes, checking for collisions with
 % obstacles
@@ -70,7 +78,7 @@ end
 scatter(nodes(:,2),nodes(:,3), 10, 'filled');
 
 % Define number of nodes
-n_nodes = size(nodes,1);
+num_nodes = size(nodes,1);
 
 %% Define the valid edges
 
@@ -83,9 +91,10 @@ r = node_resolution*sqrt(2) + buffer*node_resolution;   % within sqrt(2) plus a 
 [neighbors,dist] = rangesearch(nodes(:,2:3),nodes(:,2:3),r);
 
 % Iterate through all nodes and define edges
-for i = 1:n_nodes
+for i = 1:num_nodes
     for j = 2:size(neighbors{i},2)
-        new_edge = [i-1, neighbors{i}(j)-1, dist{i}(j)];
+        cost = dist{i}(j) * (1 + 0.2*rand);     % cost is lower bounded by distance, up to 1.2 * dist
+        new_edge = [i, neighbors{i}(j), cost];
         edges = [edges; new_edge];
     end
 end
@@ -93,21 +102,46 @@ end
 % Define number of edges
 num_edges = size(edges,1);
 
-% Plot edges if desired (can take awhile)
-edge_plot_flag = false;
-
 if edge_plot_flag
     % Define an edge position matrix for plotting 
     edge_plotting = [];
     for i = 1:num_edges
-        id1 = edges(i,1) + 1;
-        id2 = edges(i,2) + 1;
+        id1 = edges(i,1);
+        id2 = edges(i,2);
         new_edge_plotting = [nodes(id1,2:3); nodes(id2,2:3)];
         edge_plotting = [edge_plotting; new_edge_plotting];
         plot(new_edge_plotting(:,1),new_edge_plotting(:,2), 'k');
     end
 end
 
+%% Create edge and node files
+
+if create_files
+    % Create the node file
+    fileID = fopen("nodes.txt","w");
+    fprintf(fileID, '%d\n', num_nodes);
+    for i = 1:num_nodes
+        fprintf(fileID,'%d, %.4f, %.4f\n', nodes(i,:));
+    end
+    fclose(fileID);
+
+    % Create the edge file
+    fileID = fopen("edges_with_costs.txt","w");
+    fprintf(fileID, '%d\n', num_edges);
+    for i = 1:num_edges
+        fprintf(fileID,'%d, %d, %.4f\n', edges(i,:));
+    end
+    fclose(fileID);
+
+    % Create the obstacles files
+    fileID = fopen("obstacles.txt","w");
+    fprintf(fileID, '%d\n', num_obs);
+    for i = 1:num_obs
+        fprintf(fileID,'%.4f, %.4f, %.4f, %.4f\n', obstacles(i,:));
+    end
+    fclose(fileID);
+
+end
 
 %% Helper Functions
 
