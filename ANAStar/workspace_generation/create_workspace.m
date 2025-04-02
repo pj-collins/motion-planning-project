@@ -6,7 +6,7 @@ close all
 %% Parameters
 
 % Plot edges if desired (can take awhile)
-edge_plot_flag = true;
+edge_plot_flag = false;
 
 % Create edge and node txt files
 create_files = true;
@@ -21,8 +21,6 @@ params.y_range = params.y_max - params.y_min;
 
 % Define rectangular obstacles as 4-element vector v = [x1, x2, y1, y2]
 % where x2 > x1, y2 > y1
-num_obs = 7;
-obstacles = zeros(num_obs, 4);
 
 % Obstacles
 obstacles(1,:) = add_obstacle(0.1,0.3,0.2,0.3,params);
@@ -32,6 +30,8 @@ obstacles(4,:) = add_obstacle(0.75,0.9,0.2,0.65,params);
 obstacles(5,:) = add_obstacle(0.2,0.4,0.55,0.7,params);
 obstacles(6,:) = add_obstacle(0.6,0.7,0,0.4,params);
 obstacles(7,:) = add_obstacle(0.6,0.7,0.5,1,params);
+obstacles(8,:) = add_obstacle(0.8,0.9,0.05,0.2,params);
+num_obs = size(obstacles,1);
 
 % Plot the workspace
 fig1 = figure;
@@ -93,7 +93,18 @@ r = node_resolution*sqrt(2) + buffer*node_resolution;   % within sqrt(2) plus a 
 % Iterate through all nodes and define edges
 for i = 1:num_nodes
     for j = 2:size(neighbors{i},2)
-        cost = dist{i}(j) * (1 + 0.2*rand);     % cost is lower bounded by distance, up to 1.2 * dist
+        % Check if edge already exits
+        if i ~= 1
+            neighbor_set = find(edges(:,1) == neighbors{i}(j));
+            repeat_edge_id = neighbor_set(edges(neighbor_set,2) == i);
+            if ~isempty(repeat_edge_id)
+                cost = edges(repeat_edge_id, 3);
+            else
+                cost = dist{i}(j) * (1 + 0.2*rand);     % cost is lower bounded by distance, up to 1.2 * dist
+            end
+        else
+            cost = dist{i}(j) * (1 + 0.2*rand);     % cost is lower bounded by distance, up to 1.2 * dist
+        end
         new_edge = [i, neighbors{i}(j), cost];
         edges = [edges; new_edge];
     end
@@ -118,7 +129,7 @@ end
 
 if create_files
     % Create the node file
-    fileID = fopen("nodes.txt","w");
+    fileID = fopen("workspace_files/nodes.txt","w");
     fprintf(fileID, '%d\n', num_nodes);
     for i = 1:num_nodes
         fprintf(fileID,'%d, %.4f, %.4f\n', nodes(i,:));
@@ -126,7 +137,7 @@ if create_files
     fclose(fileID);
 
     % Create the edge file
-    fileID = fopen("edges_with_costs.txt","w");
+    fileID = fopen("workspace_files/edges_with_costs.txt","w");
     fprintf(fileID, '%d\n', num_edges);
     for i = 1:num_edges
         fprintf(fileID,'%d, %d, %.4f\n', edges(i,:));
@@ -134,7 +145,7 @@ if create_files
     fclose(fileID);
 
     % Create the obstacles files
-    fileID = fopen("obstacles.txt","w");
+    fileID = fopen("workspace_files/obstacles.txt","w");
     fprintf(fileID, '%d\n', num_obs);
     for i = 1:num_obs
         fprintf(fileID,'%.4f, %.4f, %.4f, %.4f\n', obstacles(i,:));

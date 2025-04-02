@@ -82,7 +82,7 @@ int main()
 
   // we want to find a path that goes from here to here
   int startNodeIndex = 430;
-  int goalNodeIndex = 1800;
+  int goalNodeIndex = 1740;
 
   // Use ID - 1 when setting the start and end nodes
   startNodeIndex--;
