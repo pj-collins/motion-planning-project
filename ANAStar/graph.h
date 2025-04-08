@@ -68,7 +68,8 @@ struct Node
 
   int status;            // used for grah search, 0 = not visited yet
                          //                       1 = in open list (i.e., in heap)
-                         //                       2 = in closed list
+                         //                       2 = in inconsistent list
+                         //                        = in closed list
 
   // the following fields are assumed by the heap data structure that I've been using
 

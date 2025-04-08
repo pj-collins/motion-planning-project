@@ -46,7 +46,7 @@ end
 %% Define the valid node
 
 % Define node resolution and set of nodes to investigate
-node_resolution = 2;
+node_resolution = 0.5;
 x_set = params.x_min:node_resolution:params.x_max;
 y_set = params.y_min:node_resolution:params.y_max;
 
