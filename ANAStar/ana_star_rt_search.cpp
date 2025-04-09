@@ -75,7 +75,7 @@ void aStar(Heap<Node> &H, Node* thisNode, Node* goalNode)
 
 
 // ANA star expansion
-void anaStar(Heap<Node> &H, Node* thisNode, Node* goalNode)
+void anaStar(Heap<Node> &H, Node* thisNode, Node* goalNode, double goalCost)
 {
   for(int n = 0; n < thisNode->numOutgoingEdges; n++)
   {
@@ -84,14 +84,22 @@ void anaStar(Heap<Node> &H, Node* thisNode, Node* goalNode)
                                              // other end of this edge
 
     // Neighbor has not yet been visited or its cost_to_start is wrong 
-    if(neighborNode->status == 0 || neighborNode->cost_to_start > (thisNode->cost_to_start + thisEdge->edgeCost)) 
-    {
+    //if(neighborNode->status == 0 || neighborNode->cost_to_start > (thisNode->cost_to_start + thisEdge->edgeCost)) 
+    if(neighborNode->status == 0 || neighborNode->cost_to_start > (thisNode->cost_to_start + thisEdge->edgeCost))
+    {      
       // Remember this node as its parent
       neighborNode->parentNode = thisNode;
 
       // Redefine the cost to start for the neighbor
       neighborNode->cost_to_start = (thisNode->cost_to_start + thisEdge->edgeCost);
 
+      if(neighborNode->cost_to_start + heurisitic_func(neighborNode,goalNode) < goalCost)
+      {
+        double neighborKey = (goalCost - goalNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
+        H.updateNodeInHeap(neighborNode, 1/neighborKey);
+        neighborNode->status = 1;
+      }
+      
       // If the neighbor node is closed, put in in the inconsistent set
       if(neighborNode->status == 3)
       {
@@ -100,8 +108,39 @@ void anaStar(Heap<Node> &H, Node* thisNode, Node* goalNode)
       // Otherwise, update the neighbor's key in the heap and add it to the open list
       else
       {
-        double neighborKey = (goalNode->cost_to_start - neighborNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
-        H.updateNodeInHeap(neighborNode, neighborKey);
+        double neighborKey = (goalCost - neighborNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
+        H.updateNodeInHeap(neighborNode, 1/neighborKey);
+        neighborNode->status = 1;
+      }
+      
+    }
+  }
+}
+
+
+// ANA star expansion
+void anaStar_simple(Heap<Node> &H, Node* thisNode, Node* goalNode, double goalCost)
+{
+  for(int n = 0; n < thisNode->numOutgoingEdges; n++)
+  {
+    Edge* thisEdge = thisNode->outgoingEdges[n];  // pointer to this edge
+    Node* neighborNode = thisEdge->endNode;  // pointer to the node on the 
+                                             // other end of this edge
+
+    // Neighbor has not yet been visited or its cost_to_start is wrong 
+    //if(neighborNode->status == 0 || neighborNode->cost_to_start > (thisNode->cost_to_start + thisEdge->edgeCost)) 
+    if(neighborNode->cost_to_start > (thisNode->cost_to_start + thisEdge->edgeCost))
+    {      
+      // Redefine the cost to start for the neighbor
+      neighborNode->cost_to_start = (thisNode->cost_to_start + thisEdge->edgeCost);
+
+      // Remember this node as its parent
+      neighborNode->parentNode = thisNode;
+
+      if(neighborNode->cost_to_start + heurisitic_func(neighborNode,goalNode) < goalCost)
+      {
+        double neighborKey = (goalCost - neighborNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
+        H.updateNodeInHeap(neighborNode, 1/neighborKey);
         neighborNode->status = 1;
       }
       
@@ -124,7 +163,7 @@ int main()
   auto duration = std::chrono::milliseconds(100);
 
   // we want to find a path that goes from here to here
-  int startNodeIndex = 4500;
+  int startNodeIndex = 1;
   int goalNodeIndex = 25042;
 
   // Use ID - 1 when setting the start and end nodes
@@ -142,26 +181,85 @@ int main()
 
 
   // Add the start node to the heap, set it to an open status
-  double key = heurisitic_func(startNode, goalNode);
-  H.addToHeap(startNode, key);
   startNode->status = 1;          // now the start node is in the open list
   startNode->cost_to_start = 0;   // the start node's cost to start is set to 0
+  double goalCost = goalNode->cost_to_start ;
+  double key = (goalCost - startNode->cost_to_start)/heurisitic_func(startNode, goalNode);
+  H.addToHeap(startNode, 1/key);
 
   int counter = 0;
+
+  Node* topNode = H.topHeap(); 
 
   // Get the starting time
   auto start = std::chrono::steady_clock::now();
 
+  while(std::chrono::steady_clock::now() - start < duration && topNode != NULL)
+  {
+    // IMPROVE SOLUTION
+    while (topNode != NULL)
+    {
+      // Pop a node off the top of the heap
+      Node* thisNode = H.popHeap(); // pop a node off the heap
+
+      // If the node is the goal node, the optimal solution has been found
+      if(thisNode->id == goalNode->id)
+      {
+        goalCost = goalNode->cost_to_start;
+        break;
+      }
+
+      anaStar_simple(H, thisNode, goalNode, goalCost); 
+
+      topNode = H.topHeap();
+    }
+
+    // Increment counter
+    counter++;
+
+    // Empty the heap by deleting it and reinitializing it
+    // H.deleteHeap();
+    // Heap<Node> H(40000);
+
+    //printf("Heap last index: %d\n",H.indexOfLast);
+
+    // Reassign nodes to different sets
+    for(int i = 0; i < H.indexOfLast + 1; i++)
+    {
+      Node* thisNode = H.heapNode[i];
+
+      if(thisNode->cost_to_start + heurisitic_func(thisNode, goalNode) >= goalCost)
+      {
+        H.removeNodeFromHeap(thisNode);
+      }
+      else
+      {
+        key = (goalCost - thisNode->cost_to_start)/heurisitic_func(thisNode, goalNode);
+        H.updateNodeInHeap(thisNode, 1/key);
+      }
+
+    }
+
+    topNode = H.topHeap();
+
+  }
+  /*
   while(std::chrono::steady_clock::now() - start < duration)
   {
     Node* topNode = H.topHeap(); 
 
-    while(topNode != NULL && topNode->cost_to_start < goalNode->cost_to_start)
+    while(topNode != NULL && topNode->cost_to_start <= goalCost)
     {
       Node* thisNode = H.popHeap(); // pop a node off the heap
       thisNode->status = 3;         // add this node to the closed set
 
-      anaStar(H, thisNode, goalNode);
+      if(thisNode->id == goalNode->id)
+      {
+        goalCost = goalNode->cost_to_start;
+        break;
+      }
+
+      anaStar(H, thisNode, goalNode, goalCost);
 
       topNode = H.topHeap(); 
 
@@ -171,8 +269,9 @@ int main()
     counter++;
 
     // Empty the heap by deleting it and reinitializing it
-    H.deleteHeap();
-    Heap<Node> H(40000);
+    //H.deleteHeap();
+    //Heap<Node> H(40000);
+    int heap_size = 0;
 
     // Reassign nodes to different sets
     for(int i = 0; i < G.numNodes; i++)
@@ -187,17 +286,26 @@ int main()
       // Else if node is in closed set, put it in unvisited set
       else if(thisNode->status == 3)
       {
-        thisNode->status = 0;
+        //thisNode->status = 0;
       } 
 
       // If a node is open, add it to the heap
       if(thisNode->status == 1)
       {
-        key = (goalNode->cost_to_start - thisNode->cost_to_start)/heurisitic_func(thisNode, goalNode);
-        H.addToHeap(thisNode, key);
+        if(thisNode->cost_to_start + heurisitic_func(thisNode, goalNode) >= goalCost)
+        {
+          heap_size++;
+          key = (goalCost - thisNode->cost_to_start)/heurisitic_func(thisNode, goalNode);
+          H.addToHeap(thisNode, 1/key);
+        }
       }
+
     }
+
+    //printf("Heap Size: %d\n", heap_size);
+
   }
+    */
 
   printf("Iterations completed: %d\n", counter);
 
