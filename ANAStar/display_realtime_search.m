@@ -4,7 +4,7 @@ close all
 clear all
 
 % Define test number to plot
-test_number = 2;
+test_number = 3;
 
 % Extract graph and enviornment variables
 nodes_raw = csvread('files/nodes.txt');
@@ -65,21 +65,26 @@ previous_target_path_idx = current_target_path_idx;
 
 % Initialize previous agent path vector
 previous_agent_path = [];
+agent_moves = 0;
 
 for i = 0:n_timesteps-1
+    fprintf("Timestep %d\n",i);
+
     % Extract the search path for the time step
     try
         path_raw = csvread(sprintf("%s/output_path_t%d.txt", output_path_folder, i));
     catch exception
         disp("No Path found, extracting data with tables.")
         path_raw = readtable(sprintf("%s/output_path_t%d.txt", output_path_folder, i),'Delimiter',',');
-        path_raw = table2array(path_raw(1:end-1,1:3));
+        path_raw = table2array(path_raw(1:end-1,1:4));
     end
 
     % If it's not the first time step, plot the agent's path to the current point 
     if i > 0
         agent_moves = find(cumsum(flip(path_raw(:,4))) > agent_vel, 1, 'first') - 1;
-        plot(previous_agent_path(end-agent_moves:end,2),previous_agent_path(end-agent_moves:end,3),'g','LineWidth',1.5);
+        if ~isempty(agent_moves)
+            plot(previous_agent_path(end-agent_moves:end,2),previous_agent_path(end-agent_moves:end,3),'g','LineWidth',1.5);
+        end
     end  
 
     % Plot the path the target has covered since the last time step
@@ -137,7 +142,9 @@ for i = 0:n_timesteps-1
     end
 
     % Store previous agent path
-    previous_agent_path = path_raw;
+    if ~isempty(agent_moves) || i == 0
+        previous_agent_path = path_raw;
+    end
 
     % Utilizing cost info, propogate forward to agent's next index
     previous_target_path_idx = current_target_path_idx;

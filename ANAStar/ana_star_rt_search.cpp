@@ -162,7 +162,7 @@ int main()
   //G.printGraph();
 
   // Define the test config
-  int testConfig = 2;
+  int testConfig = 3;
 
   // Initialize config values
   double agentVelocity = 6;
@@ -228,6 +228,7 @@ int main()
   goalNodeID--;
 
   int time_step = 0;
+  bool path_found = false;
 
   Heap<Node> H(40000);
   //Heap<Node> H(40000); // this is the heap (start's with space for 200 items
@@ -324,11 +325,24 @@ int main()
     //G.savePathToFile("output_path.txt", goalNode, startNode);
     //G.saveSearchTreeToFile("search_tree.txt");
 
+    // Check if a path is found
+    if(goalNode->parentNode != NULL)
+    {
+      path_found = true;
+    }
+    else
+    {
+      path_found = false;
+    }
+
     output_path_filename = "files/test" + to_string(testConfig) + "/output_paths/output_path_t" + to_string(time_step) + ".txt";
     G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
 
     // Find the reachable node for the agent, set the next start node ID
-    startNodeID = G.findReachableNode(goalNode, startNode, agentVelocity);
+    if(path_found)
+    {
+      startNodeID = G.findReachableNode(goalNode, startNode, agentVelocity);
+    }
     
     // Find the reachable node for the target, set the next target goal ID
     TP.stepForward();
