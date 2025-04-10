@@ -19,6 +19,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <sys/types.h>
 #include <time.h>
 #include <math.h>
+#include <vector>
 //#include <iostream>
 
 
@@ -99,7 +100,7 @@ class Graph
     // default constructor
     Graph()
     {
-      printf("building a default graph\n");
+      printf("\nBuilding a default graph\n");
       numNodes = 0;
       nodes = NULL;
       numEdges = 0;
@@ -109,7 +110,7 @@ class Graph
     // default destructor
     ~Graph()
     {
-      printf("deleting a graph\n");
+      printf("Deleting a graph\n");
       if(nodes != NULL)
       {
         for(int n = 0; n < numNodes; n++)
@@ -155,14 +156,14 @@ class Graph
       pFile = fopen ( nodeFilename , "r");
       if(pFile==NULL) 
       {
-        printf("unable to open file %s\n", nodeFilename);
+        printf("Unable to open file %s.\n\n", nodeFilename);
         return false;
       }
 
       // read the number of nodes 
       if(fscanf(pFile, "%d\n", &numNodes) < 1)
       {
-        printf("problem reading node number from file\n"); 
+        printf("Problem reading node number from file.\n\n"); 
         return false;
       }
 
@@ -176,7 +177,7 @@ class Graph
       {
         if(fscanf(pFile, "%d, %f, %f\n", &id, &x, &y) < 3)
         {
-          printf("problem reading the %d-th node from file\n",n); 
+          printf("Problem reading the %d-th node from file.\n\n",n); 
           return false;
         }
         // allocate the node 
@@ -207,14 +208,14 @@ class Graph
       pFile = fopen(edgeFilename, "r");
       if (pFile==NULL) 
       {
-        printf("unable to open file %s\n", edgeFilename);
+        printf("Unable to open file %s.\n\n", edgeFilename);
         return false;
       }
 
       // read the number of edges 
       if(fscanf(pFile, "%d\n", &numEdges) < 1)
       {
-        printf("problem reading edge number from file\n"); 
+        printf("Problem reading edge number from file.\n\n"); 
         return false;
       }
 
@@ -228,7 +229,7 @@ class Graph
       {
         if(fscanf(pFile, "%d, %d, %f\n", &startNodeID, &endNodeID, &cost) < 2)
         {
-          printf("problem reading the %d-th edge from file\n",m); 
+          printf("Problem reading the %d-th edge from file.\n\n",m); 
           return false;
         }
         // allocate the edge 
@@ -314,7 +315,7 @@ class Graph
       free(incommingEdgeCount);
 
 
-      printf("done reading graph from file\n");
+      printf("Done reading graph from file.\n\n");
       return true;
     }
 
@@ -369,12 +370,30 @@ class Graph
 
       Node* thisNode = goalNode;
       Node* lastNode = thisNode;    // needed for book-keeping if the last node reached is the startNode
+
+      double cost = 0;
+
       // Increment from goal node to start node, through the parent nodes
       while(thisNode != NULL)
       {
-        // format is id, x, y    
+        // Add edge cost to vector
+        for(int n = 0; n < numEdges; n++)
+        {
+          if(thisNode->parentNode != NULL)
+          {
+            if (edges[n].endNode->id == thisNode->id && edges[n].startNode->id == thisNode->parentNode->id)
+            {
+              cost = edges[n].edgeCost;
+            }
+          }
+          else
+          {
+            cost = 0;
+          }
+        }
+        // format is id, x, y, cost    
         // NOTE: incrimenting ids by 1 to convert to 1-based-indexing 
-        fprintf(pFile, "%d, %f, %f\n",thisNode->id+1, thisNode->x, thisNode->y);
+        fprintf(pFile, "%d, %f, %f, %f\n",thisNode->id+1, thisNode->x, thisNode->y, cost);
         lastNode = thisNode;
         thisNode = thisNode->parentNode;
       }
@@ -388,7 +407,7 @@ class Graph
 
 
       fclose(pFile);
-      printf("saved path in %s\n", pathFile);
+      printf("Saved path in %s.\n\n", pathFile);
 
       return true;
     }
@@ -420,10 +439,70 @@ class Graph
         }
       }
       fclose(pFile);
-      printf("saved search tree in %s\n", searchTreeFile);
+      printf("Saved search tree in %s.\n\n", searchTreeFile);
 
       return true;
     }
+
+
+    // Identify reachable node on path given some cost limit
+    int findReachableNode(Node* goalNode, Node* startNode, double cost)
+    {
+      // Define vectors to store values
+      std::vector<int> node_id;
+      std::vector<double> step_cost;
+
+      // Counter variable
+      int counter = 0;
+      int idx = 0;
+
+      Node* thisNode = goalNode;
+      Node* lastNode = thisNode;    // needed for book-keeping if the last node reached is the startNode
+
+      // Increment from goal node to start node, through the parent nodes
+      while(thisNode != NULL)
+      {
+        // Add node ID to vector
+        node_id.push_back(thisNode->id);
+
+        // Add edge cost to vector
+        for(int n = 0; n < numEdges; n++)
+        {
+          if(thisNode->parentNode != NULL)
+          {
+            if (edges[n].endNode->id == thisNode->id && edges[n].startNode->id == thisNode->parentNode->id)
+            {
+              step_cost.push_back(edges[n].edgeCost);
+            }
+          }
+          else
+          {
+            step_cost.push_back(0);
+          }
+        }
+
+        // Increment counter
+        counter++;
+  
+        // Increment to parent node
+        lastNode = thisNode;
+        thisNode = thisNode->parentNode;
+      }
+
+      for(int n = counter-1; n >= 0; n--)
+      {
+        cost -= step_cost[n-1];
+
+        if(cost - step_cost[n-2] < 0)
+        {
+          idx = n-1;
+          break;
+        }
+      }
+
+      return node_id[idx];
+    }
+
 
 
 };

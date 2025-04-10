@@ -41,6 +41,8 @@ void Heap<T>::buildHeap(int heapCapacity)
   int i;
   for(i = 0; i < heapCapacity; i++)
     heapCost[i] = LARGE;
+
+    
 }
 
 

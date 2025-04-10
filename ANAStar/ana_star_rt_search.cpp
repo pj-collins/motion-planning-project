@@ -19,11 +19,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include <chrono>
 #include <thread>
+#include <iostream>
+#include <fstream>
+#include <string>
 
 #include "heap.h"
 #include "heap.cpp"
 
 #include "graph.h"
+#include "target.h"
 
 // returns random number between 0 and 1
 float rand_f()
@@ -157,178 +161,203 @@ int main()
   G.readGraphFromFiles("files/nodes.txt", "files/edges_with_costs.txt");
   //G.printGraph();
 
+  // Define the test config
+  int testConfig = 2;
+
+  // Initialize config values
+  double agentVelocity = 6;
+  double targetVelocity = 3;
+  int planningTimeMS = 100;
+  int startNodeID = 0;
+  float target_range = 1;
+
+  // Define and open config file
+  string config_filename = "files/test" + to_string(testConfig) + "/config_" + to_string(testConfig) + ".txt";
+  string target_path_filename = "files/test" + to_string(testConfig) + "/target_path_" + to_string(testConfig) + ".txt";
+  ifstream inputFile(config_filename);
+  string label;
+
+  if(inputFile.is_open())
+  {
+    std::getline(inputFile, label, ':');
+    inputFile >> agentVelocity;
+
+    std::getline(inputFile, label, ':');
+    inputFile >> targetVelocity;
+
+    std::getline(inputFile, label, ':');
+    inputFile >> planningTimeMS;
+
+    std::getline(inputFile, label, ':');
+    inputFile >> startNodeID;
+
+    std::getline(inputFile, label, ':');
+    inputFile >> target_range;
+
+    inputFile.close(); 
+  }
+  else
+  {
+    printf("Error reading configuation file. Configurations set to default values.\n");
+  }
+
+  printf("Configurations:\nAgent Velocity = %.2f\nTarget Velocity = %.2f\nPlanning Time = %d ms\n\n", agentVelocity, targetVelocity, planningTimeMS);
+
+  // Define output folder
+  string output_folder = "files/test" + to_string(testConfig) + "/output/";
+
+  // Define the target path object
+  TargetPath TP;
+  TP.readTargetPathFromFile(target_path_filename.c_str());
+  TP.setTargetVelocity(targetVelocity);
+
   // Define timer values for ANA* to run
   // Set the duration for the timer
-  //auto duration = std::chrono::milliseconds(1);
-  auto duration = std::chrono::milliseconds(100);
+  auto duration = chrono::milliseconds(planningTimeMS);
+
+  // Bool value that determines if search is ended
+  bool endSearch = false;
+  int nextStartNodeID = 0;
+  string output_path_filename;
 
   // we want to find a path that goes from here to here
-  int startNodeIndex = 1;
-  int goalNodeIndex = 25042;
-
+  int goalNodeID = TP.currentTargetNode();
+  
   // Use ID - 1 when setting the start and end nodes
-  startNodeIndex--;
-  goalNodeIndex--;
+  startNodeID--;
+  goalNodeID--;
 
+  int time_step = 0;
 
-  Heap<Node> H(40000); // this is the heap (start's with space for 200 items
-                     // but will grow automatically as needed). Adjusted from 100.
+  Heap<Node> H(40000);
+  //Heap<Node> H(40000); // this is the heap (start's with space for 200 items
 
+  // These are pointers to the start and end nodes
+  Node* startNode = &G.nodes[startNodeID];
+  Node* goalNode = &G.nodes[goalNodeID];
+  float dist_from_target = 200;
 
-  // these are pointers to the start and end nodes
-  Node* startNode = &G.nodes[startNodeIndex];
-  Node* goalNode = &G.nodes[goalNodeIndex];
-
-
-  // Add the start node to the heap, set it to an open status
-  startNode->status = 1;          // now the start node is in the open list
-  startNode->cost_to_start = 0;   // the start node's cost to start is set to 0
-  double goalCost = goalNode->cost_to_start ;
-  double key = (goalCost - startNode->cost_to_start)/heurisitic_func(startNode, goalNode);
-  H.addToHeap(startNode, 1/key);
-
-  int counter = 0;
-
-  Node* topNode = H.topHeap(); 
-
-  // Get the starting time
-  auto start = std::chrono::steady_clock::now();
-
-  while(std::chrono::steady_clock::now() - start < duration && topNode != NULL)
+  while(!endSearch)
   {
-    // IMPROVE SOLUTION
-    while (topNode != NULL)
-    {
-      // Pop a node off the top of the heap
-      Node* thisNode = H.popHeap(); // pop a node off the heap
 
-      // If the node is the goal node, the optimal solution has been found
-      if(thisNode->id == goalNode->id)
-      {
-        goalCost = goalNode->cost_to_start;
-        break;
-      }
+    // but will grow automatically as needed). Adjusted from 100.
 
-      anaStar_simple(H, thisNode, goalNode, goalCost); 
+    // Add the start node to the heap, set it to an open status
+    startNode->status = 1;          // now the start node is in the open list
+    startNode->cost_to_start = 0;   // the start node's cost to start is set to 0
+    double goalCost = goalNode->cost_to_start ;
+    double key = (goalCost - startNode->cost_to_start)/heurisitic_func(startNode, goalNode);
+    H.addToHeap(startNode, 1/key);
 
-      topNode = H.topHeap();
-    }
+    // Define a counter variable
+    int counter = 0;
 
-    // Increment counter
-    counter++;
-
-    // Empty the heap by deleting it and reinitializing it
-    // H.deleteHeap();
-    // Heap<Node> H(40000);
-
-    //printf("Heap last index: %d\n",H.indexOfLast);
-
-    // Reassign nodes to different sets
-    for(int i = 0; i < H.indexOfLast + 1; i++)
-    {
-      Node* thisNode = H.heapNode[i];
-
-      if(thisNode->cost_to_start + heurisitic_func(thisNode, goalNode) >= goalCost)
-      {
-        H.removeNodeFromHeap(thisNode);
-      }
-      else
-      {
-        key = (goalCost - thisNode->cost_to_start)/heurisitic_func(thisNode, goalNode);
-        H.updateNodeInHeap(thisNode, 1/key);
-      }
-
-    }
-
-    topNode = H.topHeap();
-
-  }
-  /*
-  while(std::chrono::steady_clock::now() - start < duration)
-  {
     Node* topNode = H.topHeap(); 
 
-    while(topNode != NULL && topNode->cost_to_start <= goalCost)
-    {
-      Node* thisNode = H.popHeap(); // pop a node off the heap
-      thisNode->status = 3;         // add this node to the closed set
+    // Get the starting time
+    auto start = std::chrono::steady_clock::now();
 
-      if(thisNode->id == goalNode->id)
+    while(std::chrono::steady_clock::now() - start < duration && topNode != NULL)
+    {
+      // IMPROVE SOLUTION
+      while (topNode != NULL)
       {
-        goalCost = goalNode->cost_to_start;
-        break;
+        // Pop a node off the top of the heap
+        Node* thisNode = H.popHeap(); // pop a node off the heap
+
+        // If the node is the goal node, the optimal solution has been found
+        if(thisNode->id == goalNode->id)
+        {
+          goalCost = goalNode->cost_to_start;
+          break;
+        }
+
+        anaStar_simple(H, thisNode, goalNode, goalCost); 
+
+        topNode = H.topHeap();
       }
 
-      anaStar(H, thisNode, goalNode, goalCost);
+      // Increment counter
+      counter++;
 
-      topNode = H.topHeap(); 
+      // Reassign nodes to different sets
+      for(int i = 0; i < H.indexOfLast + 1; i++)
+      {
+        Node* thisNode = H.heapNode[i];
+
+        if(thisNode->cost_to_start + heurisitic_func(thisNode, goalNode) >= goalCost)
+        {
+          H.removeNodeFromHeap(thisNode);
+        }
+        else
+        {
+          key = (goalCost - thisNode->cost_to_start)/heurisitic_func(thisNode, goalNode);
+          H.updateNodeInHeap(thisNode, 1/key);
+        }
+
+      }
+
+      topNode = H.topHeap();
 
     }
 
-    // Increment counter
-    counter++;
+    printf("Iterations completed: %d\n", counter);
 
-    // Empty the heap by deleting it and reinitializing it
+    /*
+    // Astar implementation, commented out but kept for reference
+    while(H.topHeap() != NULL)
+    {
+      Node* thisNode = H.popHeap();
+      aStar(H, thisNode, goalNode);
+
+      // end the search if we pop the goal node (the optimal path has been found)
+      if(thisNode == goalNode)
+      {
+        break;
+      }
+      // H.printHeap();
+    }
+    */
+
     //H.deleteHeap();
-    //Heap<Node> H(40000);
-    int heap_size = 0;
 
-    // Reassign nodes to different sets
+    //G.savePathToFile("output_path.txt", goalNode, startNode);
+    //G.saveSearchTreeToFile("search_tree.txt");
+
+    output_path_filename = "files/test" + to_string(testConfig) + "/output_paths/output_path_t" + to_string(time_step) + ".txt";
+    G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
+
+    // Find the reachable node for the agent, set the next start node ID
+    startNodeID = G.findReachableNode(goalNode, startNode, agentVelocity);
+    
+    // Find the reachable node for the target, set the next target goal ID
+    TP.stepForward();
+    goalNodeID = TP.currentTargetNode();
+
+    time_step++;
+    
     for(int i = 0; i < G.numNodes; i++)
     {
       Node* thisNode = &G.nodes[i];
-      
-      // If a node is in the inconsistent set, put it in the open set
-      if(thisNode->status == 2)
-      {
-        thisNode->status = 1;
-      }
-      // Else if node is in closed set, put it in unvisited set
-      else if(thisNode->status == 3)
-      {
-        //thisNode->status = 0;
-      } 
+      H.removeNodeFromHeap(thisNode);
 
-      // If a node is open, add it to the heap
-      if(thisNode->status == 1)
-      {
-        if(thisNode->cost_to_start + heurisitic_func(thisNode, goalNode) >= goalCost)
-        {
-          heap_size++;
-          key = (goalCost - thisNode->cost_to_start)/heurisitic_func(thisNode, goalNode);
-          H.addToHeap(thisNode, 1/key);
-        }
-      }
+      thisNode->parentNode = NULL;
 
     }
 
-    //printf("Heap Size: %d\n", heap_size);
+    startNode = &G.nodes[startNodeID];
+    goalNode = &G.nodes[goalNodeID];
 
-  }
-    */
-
-  printf("Iterations completed: %d\n", counter);
-
-  /*
-  // Astar implementation, commented out but kept for reference
-  while(H.topHeap() != NULL)
-  {
-    Node* thisNode = H.popHeap();
-    aStar(H, thisNode, goalNode);
-
-    // end the search if we pop the goal node (the optimal path has been found)
-    if(thisNode == goalNode)
+    dist_from_target = heurisitic_func(startNode, goalNode);
+    printf("Agent Distance from target: %.2f\n", dist_from_target);
+    
+    if(dist_from_target < target_range)
     {
-      break;
+      endSearch = true;
+      printf("Target Found!!!\n\n");
     }
-    // H.printHeap();
+
   }
-  */
-
-  H.deleteHeap();
-
-  G.savePathToFile("output_path.txt", goalNode, startNode);
-  G.saveSearchTreeToFile("search_tree.txt");
 
 
   return 0;

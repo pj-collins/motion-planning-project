@@ -23,7 +23,7 @@ try
 catch exception
     disp("No Path found, extracting data with tables.")
     path_raw = readtable('output_path.txt','Delimiter',',');
-    path_raw = table2array(path_raw(1:end-1,:));
+    path_raw = table2array(path_raw(1:end-1,1:3));
 end
 
 nodes_raw = csvread('files/nodes.txt');

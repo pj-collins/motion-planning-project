@@ -91,7 +91,7 @@ class Heap
      // constructor that should be used most of the time
      Heap(int heapCapacity)
      {
-       //printf("building a heap with %d elements\n", heapCapacity);
+       printf("Building a heap with %d elements\n", heapCapacity);
        buildHeap(heapCapacity);
      }
 
@@ -99,7 +99,7 @@ class Heap
      // destructor
      ~Heap()
      {
-       //printf("deleting a heap\n");
+       printf("Deleting a heap\n");
        deleteHeap();
      }
 
