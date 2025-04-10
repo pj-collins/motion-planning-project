@@ -4,7 +4,7 @@ close all
 clear all
 
 % Define test number to plot
-test_number = 3;
+test_number = 4;
 
 % Extract graph and enviornment variables
 nodes_raw = csvread('files/nodes.txt');

@@ -1,0 +1,5 @@
+Agent velocity per time step: 2.5
+Target velocity per time step: 2
+Milliseconds per plan: 500
+Agent Start Node ID: 27400
+Target Range: 3

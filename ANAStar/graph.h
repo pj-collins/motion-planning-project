@@ -444,6 +444,33 @@ class Graph
       return true;
     }
 
+    // Function that takes as input an x- and y- coordinate as well as a valid radius, and returns a node ID
+    // of the closest node to that coordinate point assuming it is within the valid radius
+    int findClosestNode(double x, double y, double radius)
+    {
+      double min_dist = 100;
+      int closestNodeID = -1;
+      
+      for(int n = 0; n < numNodes; n++)
+      {
+        double x_n = nodes[n].x;
+        double y_n = nodes[n].y;
+
+        double dist = sqrt((x - x_n)*(x - x_n) + (y - y_n)*(y - y_n));
+
+        if(dist < min_dist)
+        {
+          min_dist = dist;
+          if(min_dist < radius)
+          {
+            closestNodeID = n;
+          }
+        }
+      }
+
+      return closestNodeID;
+    }
+
 
     // Identify reachable node on path given some cost limit
     int findReachableNode(Node* goalNode, Node* startNode, double cost)

@@ -162,7 +162,8 @@ int main()
   //G.printGraph();
 
   // Define the test config
-  int testConfig = 3;
+  int testConfig = 4;
+  bool predict_target_location = false;
 
   // Initialize config values
   double agentVelocity = 6;
@@ -217,7 +218,6 @@ int main()
 
   // Bool value that determines if search is ended
   bool endSearch = false;
-  int nextStartNodeID = 0;
   string output_path_filename;
 
   // we want to find a path that goes from here to here
@@ -304,24 +304,6 @@ int main()
 
     printf("Iterations completed: %d\n", counter);
 
-    /*
-    // Astar implementation, commented out but kept for reference
-    while(H.topHeap() != NULL)
-    {
-      Node* thisNode = H.popHeap();
-      aStar(H, thisNode, goalNode);
-
-      // end the search if we pop the goal node (the optimal path has been found)
-      if(thisNode == goalNode)
-      {
-        break;
-      }
-      // H.printHeap();
-    }
-    */
-
-    //H.deleteHeap();
-
     //G.savePathToFile("output_path.txt", goalNode, startNode);
     //G.saveSearchTreeToFile("search_tree.txt");
 
@@ -346,7 +328,14 @@ int main()
     
     // Find the reachable node for the target, set the next target goal ID
     TP.stepForward();
-    goalNodeID = TP.currentTargetNode();
+    if(predict_target_location)
+    {
+      // PREDICT WHERE INTERCEPT WILL HAPPEN (TODO!)
+    }
+    else
+    {
+      goalNodeID = TP.currentTargetNode();
+    }
 
     time_step++;
     
