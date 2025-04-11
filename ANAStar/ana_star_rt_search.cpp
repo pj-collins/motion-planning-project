@@ -22,6 +22,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #include "heap.h"
 #include "heap.cpp"
@@ -153,6 +154,37 @@ void anaStar_simple(Heap<Node> &H, Node* thisNode, Node* goalNode, double goalCo
 }
 
 
+// Function that saves path search data to a file
+bool savePathSearchDataToFile(const char* pathFile, std::vector<double> bestSolutionCosts, double searchTime)
+{
+  // Open file, confirm it is valid
+  FILE * pFile = fopen(pathFile,"w");      
+  if(pFile == NULL)
+  {
+    return false;
+  }
+
+  // Pull the number of search iterations out 
+  int iterations = bestSolutionCosts.size();
+
+  // Bring the elapsed search time to the file
+  fprintf(pFile, "%lf\n", searchTime);
+  
+  // Print the number of iterations to the file
+  fprintf(pFile, "%d\n", iterations);
+
+  // Print the best solution cost (goal's cost to start) for each iteration
+  for(int i = 0; i < iterations; i++)
+  {
+    fprintf(pFile, "%lf\n", bestSolutionCosts[i]);
+  }
+
+  fclose(pFile);
+  printf("Saved path search data in %s.\n\n", pathFile);
+
+  return true;
+}
+
 
 int main()
 {
@@ -219,6 +251,7 @@ int main()
   // Bool value that determines if search is ended
   bool endSearch = false;
   string output_path_filename;
+  string path_search_data_filename;
 
   // we want to find a path that goes from here to here
   int goalNodeID = TP.currentTargetNode();
@@ -246,7 +279,8 @@ int main()
     // Add the start node to the heap, set it to an open status
     startNode->status = 1;          // now the start node is in the open list
     startNode->cost_to_start = 0;   // the start node's cost to start is set to 0
-    double goalCost = goalNode->cost_to_start ;
+    double goalCost = goalNode->cost_to_start;
+    std::vector<double> bestSolutionsCosts;
     double key = (goalCost - startNode->cost_to_start)/heurisitic_func(startNode, goalNode);
     H.addToHeap(startNode, 1/key);
 
@@ -281,6 +315,9 @@ int main()
       // Increment counter
       counter++;
 
+      // Add goal cost to cost tracker vector
+      bestSolutionsCosts.push_back(goalCost);
+
       // Reassign nodes to different sets
       for(int i = 0; i < H.indexOfLast + 1; i++)
       {
@@ -302,10 +339,19 @@ int main()
 
     }
 
+    // Record elapsed time for search
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+    double elapsed_ms = elapsed.count();
+  
+    // Print search info to terminal
     printf("Iterations completed: %d\n", counter);
+    printf("Elapsed Time: %.2f ms\n\n", elapsed_ms);
 
-    //G.savePathToFile("output_path.txt", goalNode, startNode);
-    //G.saveSearchTreeToFile("search_tree.txt");
+    // Save data to files
+    //G.savePathToFile("files/output_path.txt", goalNode, startNode);
+    //G.saveSearchTreeToFile("files/search_tree.txt");
+    //savePathSearchDataToFile("files/path_search_data.txt", bestSolutionsCosts, elapsed_ms);
 
     // Check if a path is found
     if(goalNode->parentNode != NULL)
@@ -319,6 +365,10 @@ int main()
 
     output_path_filename = "files/test" + to_string(testConfig) + "/output_paths/output_path_t" + to_string(time_step) + ".txt";
     G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
+
+    path_search_data_filename = "files/test" + to_string(testConfig) + "/path_search_data/path_search_data_t" + to_string(time_step) + ".txt";
+    savePathSearchDataToFile(path_search_data_filename.c_str(), bestSolutionsCosts, elapsed_ms);
+
 
     // Find the reachable node for the agent, set the next start node ID
     if(path_found)
@@ -359,6 +409,9 @@ int main()
       endSearch = true;
       printf("Target Found!!!\n\n");
     }
+
+    // Uncomment below if you only want 1 time step to run
+    //endSearch = true;
 
   }
 
