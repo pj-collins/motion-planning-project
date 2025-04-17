@@ -3,8 +3,15 @@
 close all
 clear all
 
-% Define test number to plot
-test_number = 4;
+% Define test config to plot
+test_number = 2;
+intercept = false;
+
+if intercept
+    subfolder_name = "intercept";
+else
+    subfolder_name = "no_intercept";
+end
 
 % Extract graph and enviornment variables
 nodes_raw = csvread('files/nodes.txt');
@@ -18,9 +25,9 @@ target_path_raw = csvread(sprintf('files/test%d/target_path_%d.txt', test_number
 config_raw = readtable(sprintf('files/test%d/config_%d.txt', test_number, test_number),'Delimiter',':');
 
 % Define output path folder and gif file name
-output_path_folder = sprintf('files/test%d/output_paths', test_number);
+output_path_folder = sprintf('files/test%d/%s/output_paths', test_number, subfolder_name);
 n_timesteps = numel(dir(output_path_folder))-2;
-gif_filename = sprintf('files/test%d/search_animation_%d.gif', test_number, test_number);
+gif_filename = sprintf('files/test%d/%s/search_animation_%d_%s.gif', test_number, subfolder_name, test_number, subfolder_name);
 
 % Process node file
 nodes = nodes_raw(2:end,2:3);

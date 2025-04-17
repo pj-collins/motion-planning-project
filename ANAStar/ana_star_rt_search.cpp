@@ -64,7 +64,7 @@ void aStar(Heap<Node> &H, Node* thisNode, Node* goalNode)
       neighborNode->cost_to_start = (thisNode->cost_to_start + thisEdge->edgeCost);
 
       // add the neighbor to the heap (with an A* key)
-      double neighborKey = neighborNode->cost_to_start + heurisitic_func(neighborNode, goalNode);
+      float neighborKey = neighborNode->cost_to_start + heurisitic_func(neighborNode, goalNode);
       H.updateNodeInHeap(neighborNode, neighborKey);
       
       // remeber this node as its parent
@@ -100,7 +100,7 @@ void anaStar(Heap<Node> &H, Node* thisNode, Node* goalNode, double goalCost)
 
       if(neighborNode->cost_to_start + heurisitic_func(neighborNode,goalNode) < goalCost)
       {
-        double neighborKey = (goalCost - goalNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
+        float neighborKey = (goalCost - goalNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
         H.updateNodeInHeap(neighborNode, 1/neighborKey);
         neighborNode->status = 1;
       }
@@ -113,7 +113,7 @@ void anaStar(Heap<Node> &H, Node* thisNode, Node* goalNode, double goalCost)
       // Otherwise, update the neighbor's key in the heap and add it to the open list
       else
       {
-        double neighborKey = (goalCost - neighborNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
+        float neighborKey = (goalCost - neighborNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
         H.updateNodeInHeap(neighborNode, 1/neighborKey);
         neighborNode->status = 1;
       }
@@ -144,7 +144,7 @@ void anaStar_simple(Heap<Node> &H, Node* thisNode, Node* goalNode, double goalCo
 
       if(neighborNode->cost_to_start + heurisitic_func(neighborNode,goalNode) < goalCost)
       {
-        double neighborKey = (goalCost - neighborNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
+        float neighborKey = (goalCost - neighborNode->cost_to_start)/heurisitic_func(neighborNode, goalNode);
         H.updateNodeInHeap(neighborNode, 1/neighborKey);
         neighborNode->status = 1;
       }
@@ -194,8 +194,8 @@ int main()
   //G.printGraph();
 
   // Define the test config
-  int testConfig = 4;
-  bool predict_target_location = false;
+  int testConfig = 3;
+  bool intercept = false;
 
   // Initialize config values
   double agentVelocity = 6;
@@ -252,6 +252,17 @@ int main()
   bool endSearch = false;
   string output_path_filename;
   string path_search_data_filename;
+  string output_subfolder;
+
+  // Test subfolder name
+  if(intercept)
+  {
+    output_subfolder = "intercept";
+  }
+  else
+  {
+    output_subfolder = "no_intercept";
+  }
 
   // we want to find a path that goes from here to here
   int goalNodeID = TP.currentTargetNode();
@@ -363,10 +374,10 @@ int main()
       path_found = false;
     }
 
-    output_path_filename = "files/test" + to_string(testConfig) + "/output_paths/output_path_t" + to_string(time_step) + ".txt";
+    output_path_filename = "files/test" + to_string(testConfig) + "/" + output_subfolder + "/output_paths/output_path_t" + to_string(time_step) + ".txt";
     G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
 
-    path_search_data_filename = "files/test" + to_string(testConfig) + "/path_search_data/path_search_data_t" + to_string(time_step) + ".txt";
+    path_search_data_filename = "files/test" + to_string(testConfig)+ + "/" + output_subfolder + "/path_search_data/path_search_data_t" + to_string(time_step) + ".txt";
     savePathSearchDataToFile(path_search_data_filename.c_str(), bestSolutionsCosts, elapsed_ms);
 
 
@@ -378,7 +389,7 @@ int main()
     
     // Find the reachable node for the target, set the next target goal ID
     TP.stepForward();
-    if(predict_target_location)
+    if(intercept)
     {
       // PREDICT WHERE INTERCEPT WILL HAPPEN (TODO!)
     }

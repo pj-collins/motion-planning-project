@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/pjcol/Documents/Repos/SchoolWork/MotionPlanning/Homework/Homework1/AStar",
-      "program": "c:/Users/pjcol/Documents/Repos/SchoolWork/MotionPlanning/Homework/Homework1/AStar/build/Debug/outDebug",
+      "cwd": "c:/Users/pjcol/Documents/Repos/motion-planning-project/ANAStar",
+      "program": "c:/Users/pjcol/Documents/Repos/motion-planning-project/ANAStar/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
