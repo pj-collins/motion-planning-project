@@ -4,7 +4,7 @@ close all
 clear all
 
 % Define test config to plot
-test_number = 2;
+test_number = 4;
 intercept = false;
 
 if intercept

@@ -194,7 +194,7 @@ int main()
   //G.printGraph();
 
   // Define the test config
-  int testConfig = 3;
+  int testConfig = 4;
   bool intercept = false;
 
   // Initialize config values
