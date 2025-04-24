@@ -5,7 +5,7 @@ clear all
 
 % Define test config to plot
 test_number = 4;
-intercept = false;
+intercept = true;
 
 if intercept
     subfolder_name = "intercept";
@@ -65,6 +65,13 @@ end
 xlim([-50 50])
 ylim([-50 50])
 title(sprintf('Target Search, Test %d', test_number));
+
+% INTERCEPT MARKER & TIMESTAMP HANDLES ------------
+% red x that we'll move each frame
+hMarker = plot(nan, nan, 'x', 'Color','r', 'LineWidth',2, 'MarkerSize',8);
+% text label for 't = ...' that we'll update each frame
+hTime   = text(nan, nan, '', 'FontSize',12, 'FontWeight','bold', 'Color','k');
+% ----------------------------------------
 
 % Set current target path index information
 current_target_path_idx = 1;
@@ -129,6 +136,20 @@ for i = 0:n_timesteps-1
         set(h4, 'XData', agent_range * cos(theta) + path_raw(end,2));
         set(h4, 'YData', agent_range * sin(theta) + path_raw(end,3));
     end
+
+    % -------------------------------------------
+    % for intercept only : move the red x to end of generated ANA* path
+    if(intercept)
+        lastX = path_raw(1,2);
+        lastY = path_raw(1,3);
+        set(hMarker, 'XData', lastX, 'YData', lastY);
+    end
+    % position and update the time stamp text
+    xl = xlim; yl = ylim;
+    tx = xl(1) + 0.02*diff(xl);
+    ty = yl(2) - 0.05*diff(yl);
+    set(hTime, 'Position', [tx, ty], 'String', sprintf('t = %d', i));
+    % --------------------------------------------
 
     % Export the plot into a GIF format
     % Capture the plot as an image

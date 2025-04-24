@@ -195,7 +195,7 @@ int main()
 
   // Define the test config
   int testConfig = 4;
-  bool intercept = false;
+  bool intercept = true;
 
   // Initialize config values
   double agentVelocity = 6;
@@ -281,6 +281,10 @@ int main()
   Node* startNode = &G.nodes[startNodeID];
   Node* goalNode = &G.nodes[goalNodeID];
   float dist_from_target = 200;
+
+  int execHorizon = 2;       // how many agent‐steps to follow one plan
+  int execCounter = 0;       // how many we’ve executed so far
+  bool needNewInterceptGoal = true;    // true means to recompute the goal this iteration
 
   while(!endSearch)
   {
@@ -389,12 +393,64 @@ int main()
     
     // Find the reachable node for the target, set the next target goal ID
     TP.stepForward();
+    
     if(intercept)
     {
-      // PREDICT WHERE INTERCEPT WILL HAPPEN (TODO!)
+      // 1) if it’s time to replan our intercept goal:
+      if (needNewInterceptGoal) 
+      {
+        // first compute distance from agent to last‐seen target position 
+        Node* AN = &G.nodes[startNodeID];
+        int  idx = TP.current_idx;
+        double tx = TP.x[idx], ty = TP.y[idx];
+        double d  = hypot(tx - AN->x, ty - AN->y);
+
+        // choose predHorizon = ceil(time‐steps to reach last‐seen)
+        // this means we choose the prediction horizon to be equal to the time required for the agent to reach the current target position 
+        int predHorizon = max(1, (int)ceil(d / agentVelocity));
+
+        // copy TP, step it forward predHorizon times (TODO: change this to non-cheating prediction)
+        TargetPath TPcopy = TP;
+        for(int i=0; i<predHorizon; ++i) 
+        {
+          TPcopy.stepForward();
+        }
+        double predX = TPcopy.x[TPcopy.current_idx]; 
+        double predY = TPcopy.y[TPcopy.current_idx];
+
+        // snap to nearest valid node (i.e., out of an obstacle if happened)
+        int snapped = G.findClosestNode(predX, predY, agentVelocity*1.5);
+        if (snapped < 0) 
+        {
+          snapped = TP.currentTargetNode();
+        }
+        // set that as our next intercept goal
+        goalNodeID = snapped;
+
+        // write predicted positions to a file for debugging and plotting (uncomment if needed)
+        // string file = "files/test" + to_string(testConfig) + "/" + output_subfolder + "/predicted_positions.txt";
+        // ofstream flog(file, ios::app);
+        // Node &n = G.nodes[snapped];
+        // flog << n.x << "," << n.y << "\n";
+
+        // reset our execution counter and mark “goal fresh”
+        execCounter = 0;
+        needNewInterceptGoal = false;
+      }
+      // 2) We still plan here as in greedy, but with the same goalNodeID
+      
+      // 3) After planning & moving the agent one step (below), we increment our execCounter, and once we hit execHorizon,
+      // we’ll replan a fresh intercept 
+
+      execCounter++;
+      if (execCounter >= execHorizon) 
+      {
+        needNewInterceptGoal = true;
+      }
     }
     else
     {
+      // greedy pursuit normally if intercept = false 
       goalNodeID = TP.currentTargetNode();
     }
 
