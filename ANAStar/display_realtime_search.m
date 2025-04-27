@@ -66,8 +66,8 @@ xlim([-50 50])
 ylim([-50 50])
 title(sprintf('Target Search, Test %d', test_number));
 
-% INTERCEPT MARKER & TIMESTAMP HANDLES ------------
-% red x that we'll move each frame
+% Add intercept red marker and timestamp counter  ------------
+% red x mark that we'll move each frame 
 hMarker = plot(nan, nan, 'x', 'Color','r', 'LineWidth',2, 'MarkerSize',8);
 % text label for 't = ...' that we'll update each frame
 hTime   = text(nan, nan, '', 'FontSize',12, 'FontWeight','bold', 'Color','k');

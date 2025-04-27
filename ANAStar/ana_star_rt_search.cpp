@@ -282,9 +282,14 @@ int main()
   Node* goalNode = &G.nodes[goalNodeID];
   float dist_from_target = 200;
 
-  int execHorizon = 2;       // how many agent‐steps to follow one plan
-  int execCounter = 0;       // how many we’ve executed so far
+  int execHorizon = 3;       // how many agent‐steps to follow the plan
+  int execCounter = 0;       // how many we’ve executed so far from that plan 
   bool needNewInterceptGoal = true;    // true means to recompute the goal this iteration
+  
+  double lastMeasX = 0.0;
+  double lastMeasY = 0.0;
+  int    lastMeasStep = -1;    // got no prior measurements yet
+
 
   while(!endSearch)
   {
@@ -396,28 +401,55 @@ int main()
     
     if(intercept)
     {
-      // 1) if it’s time to replan our intercept goal:
+      // start here if it’s time to replan an intercept goal:
       if (needNewInterceptGoal) 
       {
         // first compute distance from agent to last‐seen target position 
         Node* AN = &G.nodes[startNodeID];
         int  idx = TP.current_idx;
-        double tx = TP.x[idx], ty = TP.y[idx];
+        double tx = TP.x[idx];
+        double ty = TP.y[idx];
         double d  = hypot(tx - AN->x, ty - AN->y);
 
         // choose predHorizon = ceil(time‐steps to reach last‐seen)
         // this means we choose the prediction horizon to be equal to the time required for the agent to reach the current target position 
+        // we can experiment with this more in our experiments (TODO!)
         int predHorizon = max(1, (int)ceil(d / agentVelocity));
 
+        // following is the cheating prediction, where we just test the sequence by stealing future target positions from the known pos
         // copy TP, step it forward predHorizon times (TODO: change this to non-cheating prediction)
-        TargetPath TPcopy = TP;
-        for(int i=0; i<predHorizon; ++i) 
-        {
-          TPcopy.stepForward();
-        }
-        double predX = TPcopy.x[TPcopy.current_idx]; 
-        double predY = TPcopy.y[TPcopy.current_idx];
+        // TargetPath TPcopy = TP;
+        // for(int i=0; i<predHorizon; ++i) 
+        // {
+        //   TPcopy.stepForward();
+        // }
+        // double predX = TPcopy.x[TPcopy.current_idx]; 
+        // double predY = TPcopy.y[TPcopy.current_idx];
+        
+        // start more realistic prediction 
+        int measT = time_step; 
+        double predX, predY; 
 
+        // if this is our first measurement, we have no direction (velocity) to know yet:
+        if(lastMeasStep < 0) 
+        {
+          // fallback to greedy: predict at the current location for the first one
+          predX = tx;
+          predY = ty;
+        }
+        else
+        {
+          //  compute velocity from lastMeas meas
+          double dt = double(measT - lastMeasStep);
+          double vx = (tx - lastMeasX) / dt;
+          double vy = (ty - lastMeasY) / dt;
+
+          // extrapolate execHorizon steps ahead
+          predX = tx + vx * execHorizon;
+          predY = ty + vy * execHorizon; 
+        }
+
+    
         // snap to nearest valid node (i.e., out of an obstacle if happened)
         int snapped = G.findClosestNode(predX, predY, agentVelocity*1.5);
         if (snapped < 0) 
@@ -427,6 +459,11 @@ int main()
         // set that as our next intercept goal
         goalNodeID = snapped;
 
+        // update last‐measurement history
+        lastMeasX    = tx;
+        lastMeasY    = ty;
+        lastMeasStep = measT;
+        
         // write predicted positions to a file for debugging and plotting (uncomment if needed)
         // string file = "files/test" + to_string(testConfig) + "/" + output_subfolder + "/predicted_positions.txt";
         // ofstream flog(file, ios::app);
@@ -436,11 +473,10 @@ int main()
         // reset our execution counter and mark “goal fresh”
         execCounter = 0;
         needNewInterceptGoal = false;
-      }
-      // 2) We still plan here as in greedy, but with the same goalNodeID
       
-      // 3) After planning & moving the agent one step (below), we increment our execCounter, and once we hit execHorizon,
-      // we’ll replan a fresh intercept 
+      }
+      // we still plan here as in greedy, but with the same goalNodeID
+      // After planning & moving the agent one step, we increment our execCounter, and once we hit execHorizon, we’ll replan a fresh intercept 
 
       execCounter++;
       if (execCounter >= execHorizon) 
@@ -468,7 +504,11 @@ int main()
     startNode = &G.nodes[startNodeID];
     goalNode = &G.nodes[goalNodeID];
 
-    dist_from_target = heurisitic_func(startNode, goalNode);
+    int   trueIdx     = TP.currentTargetNode();
+    Node* trueTarget  = &G.nodes[trueIdx];
+    //check "found" against the "actual" target node, not the intercept goal
+    dist_from_target = heurisitic_func(startNode, trueTarget);
+    // dist_from_target = heurisitic_func(startNode, goalNode);
     printf("Agent Distance from target: %.2f\n", dist_from_target);
     
     if(dist_from_target < target_range)
