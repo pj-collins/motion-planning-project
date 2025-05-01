@@ -23,6 +23,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <fstream>
 #include <string>
 #include <vector>
+#include <random>
 
 #include "heap.h"
 #include "heap.cpp"
@@ -194,8 +195,14 @@ int main()
   //G.printGraph();
 
   // Define the test config
-  int testConfig = 4;
+  int testConfig = 5;
   bool intercept = true;
+  bool noise = true;
+
+  // Random Number generator
+  std::random_device rd;                          // Seed
+  std::mt19937 gen(rd());                         // Mersenne Twister RNG
+  std::normal_distribution<> dist(0.0, 2.0);      // Mean = 0.0, Stddev = 2.0
 
   // Initialize config values
   double agentVelocity = 6;
@@ -257,11 +264,25 @@ int main()
   // Test subfolder name
   if(intercept)
   {
-    output_subfolder = "intercept";
+    if(noise)
+    {
+      output_subfolder = "intercept_noise";
+    }
+    else
+    {
+      output_subfolder = "intercept";
+    }
   }
   else
   {
-    output_subfolder = "no_intercept";
+    if(noise)
+    {
+      output_subfolder = "no_intercept_noise";
+    }
+    else
+    {
+      output_subfolder = "no_intercept";
+    }
   }
 
   // we want to find a path that goes from here to here
@@ -406,9 +427,18 @@ int main()
       {
         // first compute distance from agent to last‐seen target position 
         Node* AN = &G.nodes[startNodeID];
-        int  idx = TP.current_idx;
+
+        int idx = TP.current_idx;
         double tx = TP.x[idx];
         double ty = TP.y[idx];
+
+        // Add noise if needed
+        if(noise)
+        {
+          tx += dist(gen);
+          ty += dist(gen);
+        }
+
         double d  = hypot(tx - AN->x, ty - AN->y);
 
         // choose predHorizon = ceil(time‐steps to reach last‐seen)
@@ -452,7 +482,7 @@ int main()
     
         // snap to nearest valid node (i.e., out of an obstacle if happened)
         int snapped = G.findClosestNode(predX, predY, agentVelocity*1.5);
-        if (snapped < 0) 
+        if (snapped < 0 || snapped == startNodeID) 
         {
           snapped = TP.currentTargetNode();
         }
@@ -487,7 +517,18 @@ int main()
     else
     {
       // greedy pursuit normally if intercept = false 
-      goalNodeID = TP.currentTargetNode();
+      if(noise)
+      {
+        int idx = TP.current_idx;
+        double x_meas = TP.x[idx] + dist(gen);
+        double y_meas = TP.y[idx] + dist(gen);
+
+        goalNodeID = G.findClosestNode(x_meas, y_meas, 10);
+      }
+      else
+      {
+        goalNodeID = TP.currentTargetNode();
+      }
     }
 
     time_step++;

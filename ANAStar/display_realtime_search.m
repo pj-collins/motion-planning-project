@@ -4,13 +4,22 @@ close all
 clear all
 
 % Define test config to plot
-test_number = 4;
+test_number = 5;
 intercept = true;
+noise = true;
 
 if intercept
-    subfolder_name = "intercept";
+    if noise
+        subfolder_name = "intercept_noise";
+    else
+        subfolder_name = "intercept";
+    end
 else
-    subfolder_name = "no_intercept";
+    if noise
+        subfolder_name = "no_intercept_noise";
+    else
+        subfolder_name = "no_intercept";
+    end
 end
 
 % Extract graph and enviornment variables
@@ -95,8 +104,14 @@ for i = 0:n_timesteps-1
 
     % If it's not the first time step, plot the agent's path to the current point 
     if i > 0
-        agent_moves = find(cumsum(flip(path_raw(:,4))) > agent_vel, 1, 'first') - 1;
-        if ~isempty(agent_moves)
+        cs = cumsum(flip(path_raw(:,4)));
+        am_idx = find(cs > agent_vel, 1, 'first') - 1;
+        if isempty(am_idx)
+            agent_moves = length(cs) - 1;
+        else
+            agent_moves = am_idx;
+        end
+        if agent_moves > 0
             plot(previous_agent_path(end-agent_moves:end,2),previous_agent_path(end-agent_moves:end,3),'g','LineWidth',1.5);
         end
     end  
@@ -139,7 +154,7 @@ for i = 0:n_timesteps-1
 
     % -------------------------------------------
     % for intercept only : move the red x to end of generated ANA* path
-    if(intercept)
+    if(intercept | noise)
         lastX = path_raw(1,2);
         lastY = path_raw(1,3);
         set(hMarker, 'XData', lastX, 'YData', lastY);
@@ -170,7 +185,7 @@ for i = 0:n_timesteps-1
     end
 
     % Store previous agent path
-    if ~isempty(agent_moves) || i == 0
+    if agent_moves > 0 || i == 0
         previous_agent_path = path_raw;
     end
 
