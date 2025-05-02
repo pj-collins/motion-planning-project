@@ -4,7 +4,7 @@ close all
 clear all
 
 % Define test config to plot
-test_number = 3;
+test_number = 6;
 intercept = true;
 noise = true;
 
@@ -120,10 +120,12 @@ for i = 0:n_timesteps-1
             step_cost = cs(am_idx);
         end
         if agent_moves > 0
-            if size(previous_agent_path,1) < agent_moves
+            if size(previous_agent_path,1) < (agent_moves + 1)
                 plot(previous_agent_path(:,2),previous_agent_path(:,3),'g','LineWidth',1.5);
             else
-                plot(previous_agent_path(end-agent_moves:end,2),previous_agent_path(end-agent_moves:end,3),'g','LineWidth',1.5);
+                if agent_moves > 0
+                    plot(previous_agent_path(end-agent_moves:end,2),previous_agent_path(end-agent_moves:end,3),'g','LineWidth',1.5);
+                end
             end
         end
 
@@ -283,6 +285,7 @@ ylabel('Planning Time (mS)')
 yyaxis right
 plot(0:n_timesteps-1, path_search_data(:,2), 'LineWidth', 1.4);
 ylabel('Planning Iterations')
+legend('Planning Time Utilized', 'Planning Iterations', 'location', 'northeast')
 
 % Save planning time plot
 plot_filename = sprintf('files/test%d/%s/planning_time_%d_%s.fig', test_number, subfolder_name, test_number, subfolder_name);

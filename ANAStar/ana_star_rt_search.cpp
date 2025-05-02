@@ -195,9 +195,9 @@ int main()
   //G.printGraph();
 
   // Define the test config
-  int testConfig = 5;
-  bool intercept = true;
-  bool noise = true;
+  int testConfig = 3;
+  bool intercept = false;
+  bool noise = false;
 
   // Random Number generator
   std::random_device rd;                          // Seed
@@ -415,6 +415,10 @@ int main()
     if(path_found)
     {
       startNodeID = G.findReachableNode(goalNode, startNode, agentVelocity);
+    }
+    else
+    {
+      startNodeID = G.findClosestNode(startNode->x + targetVelocity*(1/sqrt(2)), startNode->y + targetVelocity*(1/sqrt(2)), targetVelocity*5);
     }
     
     // Find the reachable node for the target, set the next target goal ID
