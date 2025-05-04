@@ -1,0 +1,2 @@
+Timesteps before Interception = 105
+Total Agent Path Cost = 202.51

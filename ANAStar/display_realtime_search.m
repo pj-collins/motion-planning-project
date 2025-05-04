@@ -4,13 +4,22 @@ close all
 clear all
 
 % Define test config to plot
-test_number = 4;
+test_number = 6;
 intercept = true;
+noise = true;
 
 if intercept
-    subfolder_name = "intercept";
+    if noise
+        subfolder_name = "intercept_noise";
+    else
+        subfolder_name = "intercept";
+    end
 else
-    subfolder_name = "no_intercept";
+    if noise
+        subfolder_name = "no_intercept_noise";
+    else
+        subfolder_name = "no_intercept";
+    end
 end
 
 % Extract graph and enviornment variables
@@ -28,6 +37,9 @@ config_raw = readtable(sprintf('files/test%d/config_%d.txt', test_number, test_n
 output_path_folder = sprintf('files/test%d/%s/output_paths', test_number, subfolder_name);
 n_timesteps = numel(dir(output_path_folder))-2;
 gif_filename = sprintf('files/test%d/%s/search_animation_%d_%s.gif', test_number, subfolder_name, test_number, subfolder_name);
+
+% Define output path search data folder
+output_path_search_folder = sprintf('files/test%d/%s/path_search_data', test_number, subfolder_name);
 
 % Process node file
 nodes = nodes_raw(2:end,2:3);
@@ -81,6 +93,9 @@ previous_target_path_idx = current_target_path_idx;
 previous_agent_path = [];
 agent_moves = 0;
 
+% Initialize path cost counter
+path_cost = 0;
+
 for i = 0:n_timesteps-1
     fprintf("Timestep %d\n",i);
 
@@ -95,10 +110,26 @@ for i = 0:n_timesteps-1
 
     % If it's not the first time step, plot the agent's path to the current point 
     if i > 0
-        agent_moves = find(cumsum(flip(path_raw(:,4))) > agent_vel, 1, 'first') - 1;
-        if ~isempty(agent_moves)
-            plot(previous_agent_path(end-agent_moves:end,2),previous_agent_path(end-agent_moves:end,3),'g','LineWidth',1.5);
+        cs = cumsum(flip(path_raw(:,4)));
+        am_idx = find(cs > agent_vel, 1, 'first') - 1;
+        if isempty(am_idx)
+            agent_moves = length(cs) - 1;
+            step_cost = cs(end);
+        else
+            agent_moves = am_idx;
+            step_cost = cs(am_idx);
         end
+        if agent_moves > 0
+            if size(previous_agent_path,1) < (agent_moves + 1)
+                plot(previous_agent_path(:,2),previous_agent_path(:,3),'g','LineWidth',1.5);
+            else
+                if agent_moves > 0
+                    plot(previous_agent_path(end-agent_moves:end,2),previous_agent_path(end-agent_moves:end,3),'g','LineWidth',1.5);
+                end
+            end
+        end
+
+        path_cost = path_cost + step_cost;
     end  
 
     % Plot the path the target has covered since the last time step
@@ -139,7 +170,7 @@ for i = 0:n_timesteps-1
 
     % -------------------------------------------
     % for intercept only : move the red x to end of generated ANA* path
-    if(intercept)
+    if(intercept | noise)
         lastX = path_raw(1,2);
         lastY = path_raw(1,3);
         set(hMarker, 'XData', lastX, 'YData', lastY);
@@ -171,7 +202,7 @@ for i = 0:n_timesteps-1
     if i == 0
         imwrite(imind, cm, gif_filename, 'gif', 'Loopcount', inf, 'DelayTime', 0.1);
     else
-        if i == n_timesteps - 1
+        if i == n_timesteps
             delta_t = 1;
         else
             delta_t = 0.1;
@@ -180,7 +211,7 @@ for i = 0:n_timesteps-1
     end
 
     % Store previous agent path
-    if ~isempty(agent_moves) || i == 0
+    if agent_moves > 0 || i == 0
         previous_agent_path = path_raw;
     end
 
@@ -198,11 +229,15 @@ for i = 0:n_timesteps-1
 end
 
 % Calculate how far the agent moves on the last step, plot its movement
-agent_moves = find(cumsum(flip(path_raw(:,4))) > agent_vel, 1, 'first') - 1;
+cs = cumsum(flip(path_raw(:,4)));
+agent_moves = find(cs > agent_vel, 1, 'first') - 1;
 plot(previous_agent_path(end-agent_moves:end,2),previous_agent_path(end-agent_moves:end,3),'g','LineWidth',1.5);
 
 % Plot the target's movement on the last step
 plot(target_path(previous_target_path_idx:current_target_path_idx,2), target_path(previous_target_path_idx:current_target_path_idx,3), 'k', 'LineWidth', 1.2)
+
+% Add final value to path cost
+path_cost = path_cost + cs(agent_moves);
 
 % Reset agent's current position
 set(h2, 'XData', previous_agent_path(end-agent_moves,2));
@@ -216,6 +251,55 @@ set(h3, 'YData', target_path(current_target_path_idx,3));
 set(h4, 'XData', agent_range * cos(theta) + previous_agent_path(end-agent_moves,2));
 set(h4, 'YData', agent_range * sin(theta) + previous_agent_path(end-agent_moves,3));
 
+% position and update the time stamp text
+xl = xlim; yl = ylim;
+tx = xl(1) + 0.02*diff(xl);
+ty = yl(2) - 0.05*diff(yl);
+set(hTime, 'Position', [tx, ty], 'String', sprintf('t = %d', n_timesteps));
+
+% Update the gif 1 final time
+frame = getframe(gcf);
+im = frame2im(frame);
+[imind, cm] = rgb2ind(im, 256);
+imwrite(imind, cm, gif_filename, 'gif', 'WriteMode', 'append', 'DelayTime', 3.0);
+
+% Initialize search data matrix
+% [search time MS, search iterations], each row is a timestep
+path_search_data = zeros(n_timesteps,2);
+
+% Extract and analyze planning time data
+for i = 0:n_timesteps-1
+    % Extract raw path search data for timestep
+    path_search_raw = csvread(sprintf("%s/path_search_data_t%d.txt", output_path_search_folder, i));
+    
+    % Stuff values into matrix
+    path_search_data(i+1, :) = path_search_raw(1:2)';
+end
+
+% Print final statistics
+fprintf("\nTimesteps before Interception = %d\nTotal Agent Path Cost = %.2f\n", n_timesteps, path_cost);
+
+% Print stats to txt file
+stats_filename = sprintf('files/test%d/%s/stats_%d_%s.txt', test_number, subfolder_name, test_number, subfolder_name);
+fileID = fopen(stats_filename, 'w');
+fprintf(fileID, 'Timesteps before Interception = %d\nTotal Agent Path Cost = %.2f', n_timesteps, path_cost);
+fclose(fileID);
+
+% Create plot for planning time per time step
+f2 = figure;
+plot(0:n_timesteps-1, path_search_data(:,1), 'LineWidth', 1.4);
+hold on, grid on
+title('Planning Time and ANA* Iterations')
+xlabel('Timestep');
+ylabel('Planning Time (mS)')
+yyaxis right
+plot(0:n_timesteps-1, path_search_data(:,2), 'LineWidth', 1.4);
+ylabel('Planning Iterations')
+legend('Planning Time Utilized', 'Planning Iterations', 'location', 'northeast')
+
+% Save planning time plot
+plot_filename = sprintf('files/test%d/%s/planning_time_%d_%s.fig', test_number, subfolder_name, test_number, subfolder_name);
+savefig(f2, plot_filename);
 
 %% Helper functions
 

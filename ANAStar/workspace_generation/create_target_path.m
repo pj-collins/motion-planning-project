@@ -6,7 +6,7 @@ clear all
 %% Parameters
 
 create_files = true;
-file_name = "target_path_3";
+file_name = "target_path_6";
 
 %% Load variables
 
@@ -79,7 +79,9 @@ while continue_path
     selection = input("\n\nSelect an Option: ");
 
     % Add new nodes to target path, or end the exercise
-    if selection == 9
+    if selection > 9
+        continue
+    elseif selection == 9
         continue_path = false;
         break;
     else
