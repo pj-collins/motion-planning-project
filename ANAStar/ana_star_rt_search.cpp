@@ -195,9 +195,9 @@ int main()
   //G.printGraph();
 
   // Define the test config
-  int testConfig = 3;
-  bool intercept = false;
-  bool noise = false;
+  int testConfig = 5;
+  bool intercept = true;
+  bool noise = true;
 
   // Random Number generator
   std::random_device rd;                          // Seed
@@ -303,7 +303,7 @@ int main()
   Node* goalNode = &G.nodes[goalNodeID];
   float dist_from_target = 200;
 
-  int execHorizon = 3;       // how many agent‐steps to follow the plan
+  int execHorizon = 10;       // how many agent‐steps to follow the plan
   int execCounter = 0;       // how many we’ve executed so far from that plan 
   bool needNewInterceptGoal = true;    // true means to recompute the goal this iteration
   
@@ -405,21 +405,35 @@ int main()
     }
 
     output_path_filename = "files/test" + to_string(testConfig) + "/" + output_subfolder + "/output_paths/output_path_t" + to_string(time_step) + ".txt";
-    G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
+    // G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
 
     path_search_data_filename = "files/test" + to_string(testConfig)+ + "/" + output_subfolder + "/path_search_data/path_search_data_t" + to_string(time_step) + ".txt";
     savePathSearchDataToFile(path_search_data_filename.c_str(), bestSolutionsCosts, elapsed_ms);
 
+    int nextStartNodeID; 
 
     // Find the reachable node for the agent, set the next start node ID
     if(path_found)
     {
-      startNodeID = G.findReachableNode(goalNode, startNode, agentVelocity);
+      nextStartNodeID = G.findReachableNode(goalNode, startNode, agentVelocity);
+      G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
     }
     else
     {
-      startNodeID = G.findClosestNode(startNode->x + targetVelocity*(1/sqrt(2)), startNode->y + targetVelocity*(1/sqrt(2)), targetVelocity*5);
+      double dx = goalNode->x - startNode->x;
+      double dy = goalNode->y - startNode->y;
+      double norm = hypot(dx,dy);
+      double ux = dx / norm, uy = dy / norm;
+      double fx = startNode->x + ux * 1.5 * agentVelocity;
+      double fy = startNode->y + uy * 1.5 * agentVelocity;
+      nextStartNodeID = G.findClosestNode(fx, fy, agentVelocity);
+      if (nextStartNodeID < 0) nextStartNodeID = startNodeID;
+      // startNodeID = G.findClosestNode(startNode->x + targetVelocity*(1/sqrt(2)), startNode->y + targetVelocity*(1/sqrt(2)), targetVelocity*5);
+      
+      G.savePathToFile(output_path_filename.c_str(), &G.nodes[nextStartNodeID], startNode);
     }
+
+    startNodeID = nextStartNodeID; 
     
     // Find the reachable node for the target, set the next target goal ID
     TP.stepForward();

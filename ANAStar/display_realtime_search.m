@@ -4,7 +4,7 @@ close all
 clear all
 
 % Define test config to plot
-test_number = 6;
+test_number = 5;
 intercept = true;
 noise = true;
 
@@ -102,11 +102,15 @@ for i = 0:n_timesteps-1
     % Extract the search path for the time step
     try
         path_raw = csvread(sprintf("%s/output_path_t%d.txt", output_path_folder, i));
+
+     % now proceed to plot path_raw as before…
     catch exception
         disp("No Path found, extracting data with tables.")
         path_raw = readtable(sprintf("%s/output_path_t%d.txt", output_path_folder, i),'Delimiter',',');
         path_raw = table2array(path_raw(1:end-1,1:4));
     end
+    
+
 
     % If it's not the first time step, plot the agent's path to the current point 
     if i > 0
@@ -187,12 +191,12 @@ for i = 0:n_timesteps-1
     frame = getframe(gcf); 
     
     % if this is one of the key frames we want to pull, save it as a PNG
-    keyFrames = [0, 25, 50, 75];
-    if ismember(i, keyFrames)
-        set(gca,'Color','w');
-        exportgraphics(gcf, sprintf('files/test%d/%s/frame_%02d.png',test_number, subfolder_name,i), 'Resolution', 300);
-
-    end
+    % keyFrames = [0, 25, 50, 75];
+    % if ismember(i, keyFrames)
+    %     set(gca,'Color','w');
+    %     exportgraphics(gcf, sprintf('files/test%d/%s/frame_%02d.png',test_number, subfolder_name,i), 'Resolution', 300);
+    % 
+    % end
 
 
     im = frame2im(frame);
@@ -298,8 +302,14 @@ ylabel('Planning Iterations')
 legend('Planning Time Utilized', 'Planning Iterations', 'location', 'northeast')
 
 % Save planning time plot
-plot_filename = sprintf('files/test%d/%s/planning_time_%d_%s.fig', test_number, subfolder_name, test_number, subfolder_name);
-savefig(f2, plot_filename);
+% plot_filename = sprintf('files/test%d/%s/planning_time_%d_%s.fig', test_number, subfolder_name, test_number, subfolder_name);
+% savefig(f2, plot_filename);
+
+% plot_filename = sprintf( ...
+%     'files/test%d/%s/planning_time_%d_%s.png', ...
+%     test_number, subfolder_name, test_number, subfolder_name);
+% exportgraphics(f2, plot_filename, 'Resolution', 300);
+% 
 
 %% Helper functions
 
