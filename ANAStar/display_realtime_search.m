@@ -153,7 +153,17 @@ for i = 0:n_timesteps-1
 
     % Export the plot into a GIF format
     % Capture the plot as an image
-    frame = getframe(gcf);
+    frame = getframe(gcf); 
+    
+    % if this is one of the key frames we want to pull, save it as a PNG
+    keyFrames = [0, 25, 50, 75];
+    if ismember(i, keyFrames)
+        set(gca,'Color','w');
+        exportgraphics(gcf, sprintf('files/test%d/%s/frame_%02d.png',test_number, subfolder_name,i), 'Resolution', 300);
+
+    end
+
+
     im = frame2im(frame);
     [imind, cm] = rgb2ind(im, 256);
 
