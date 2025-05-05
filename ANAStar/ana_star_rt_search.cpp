@@ -195,9 +195,9 @@ int main()
   //G.printGraph();
 
   // Define the test config
-  int testConfig = 5;
+  int testConfig = 6;
   bool intercept = true;
-  bool noise = true;
+  bool noise = false;
 
   // Random Number generator
   std::random_device rd;                          // Seed
@@ -303,7 +303,7 @@ int main()
   Node* goalNode = &G.nodes[goalNodeID];
   float dist_from_target = 200;
 
-  int execHorizon = 10;       // how many agent‐steps to follow the plan
+  int execHorizon = 15;       // how many agent‐steps to follow the plan
   int execCounter = 0;       // how many we’ve executed so far from that plan 
   bool needNewInterceptGoal = true;    // true means to recompute the goal this iteration
   
@@ -311,6 +311,9 @@ int main()
   double lastMeasY = 0.0;
   int    lastMeasStep = -1;    // got no prior measurements yet
 
+  std::vector<Node*> lastFoundPath; // to keep track of last found good path 
+  std::vector<Node*> lastFoundPathFwd;
+  size_t fallbackIndex = 0;
 
   while(!endSearch)
   {
@@ -415,22 +418,54 @@ int main()
     // Find the reachable node for the agent, set the next start node ID
     if(path_found)
     {
+      // existing save–goal->start:
+      std::vector<Node*> tmp;
+      for (Node* n = goalNode; n; n = n->parentNode) tmp.push_back(n);
+      std::reverse(tmp.begin(), tmp.end());
+      lastFoundPathFwd = std::move(tmp);
+      fallbackIndex = 1;                      // next step we'll take index=1 
+      // save that forward path:
+      G.savePathVectorToFile(output_path_filename.c_str(), lastFoundPathFwd);
+
+
+      // G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
+      
+
       nextStartNodeID = G.findReachableNode(goalNode, startNode, agentVelocity);
-      G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
     }
     else
     {
-      double dx = goalNode->x - startNode->x;
-      double dy = goalNode->y - startNode->y;
-      double norm = hypot(dx,dy);
-      double ux = dx / norm, uy = dy / norm;
-      double fx = startNode->x + ux * 1.5 * agentVelocity;
-      double fy = startNode->y + uy * 1.5 * agentVelocity;
-      nextStartNodeID = G.findClosestNode(fx, fy, agentVelocity);
-      if (nextStartNodeID < 0) nextStartNodeID = startNodeID;
+      // re-dump the same forward path
+      if (!lastFoundPathFwd.empty()) {
+        G.savePathVectorToFile(output_path_filename.c_str(), lastFoundPathFwd);
+      } 
+      else {
+        // first few steps, nothing yet—use normal routine
+        G.savePathToFile(output_path_filename.c_str(), goalNode, startNode);
+      }
+
+      if (fallbackIndex < lastFoundPathFwd.size()) 
+      {
+        nextStartNodeID = lastFoundPathFwd[fallbackIndex++]->id;
+      } 
+      else 
+      {
+        // we’ve walked the whole old plan—just pause at goal
+        nextStartNodeID = lastFoundPathFwd.back()->id;
+      }
+      
+
+      // double dx = goalNode->x - startNode->x;
+      // double dy = goalNode->y - startNode->y;
+      // double norm = hypot(dx,dy);
+      // double ux = dx / norm, uy = dy / norm;
+      // double fx = startNode->x + ux * 1.5 * agentVelocity;
+      // double fy = startNode->y + uy * 1.5 * agentVelocity;
+      // nextStartNodeID = G.findClosestNode(fx, fy, agentVelocity);
+      // if (nextStartNodeID < 0) nextStartNodeID = startNodeID;
       // startNodeID = G.findClosestNode(startNode->x + targetVelocity*(1/sqrt(2)), startNode->y + targetVelocity*(1/sqrt(2)), targetVelocity*5);
       
-      G.savePathToFile(output_path_filename.c_str(), &G.nodes[nextStartNodeID], startNode);
+      // G.savePathToFile(output_path_filename.c_str(), &G.nodes[nextStartNodeID], startNode);
     }
 
     startNodeID = nextStartNodeID; 
@@ -499,7 +534,7 @@ int main()
 
     
         // snap to nearest valid node (i.e., out of an obstacle if happened)
-        int snapped = G.findClosestNode(predX, predY, agentVelocity*1.5);
+        int snapped = G.findClosestNode(predX, predY, agentVelocity*4);
         if (snapped < 0 || snapped == startNodeID) 
         {
           snapped = TP.currentTargetNode();

@@ -529,8 +529,36 @@ class Graph
 
       return node_id[idx];
     }
+    
 
-
+    // dump an arbitrary path vector
+    bool savePathVectorToFile(const char* pathFile, const std::vector<Node*>& path)
+    {
+      FILE *pFile = fopen(pathFile, "w");
+      if (!pFile) return false;
+    
+      double cost = 0.0;
+      // path is stored goal->start; we want to write start->goal, so iterate backwards
+      for (int i = int(path.size())-1; i >= 0; --i) {
+        Node* n = path[i];
+        // write: id, x, y, cost
+        fprintf(pFile, "%d, %f, %f, %f\n", n->id+1, n->x, n->y, cost);
+        // prepare cost for next segment (if any)
+        if (i > 0) {
+          Node* next = path[i-1];
+          // scan edges to find the one from n→next
+          for (int e=0; e<numEdges; ++e) {
+            if (edges[e].startNode->id==n->id && edges[e].endNode->id==next->id) {
+              cost = edges[e].edgeCost;
+              break;
+            }
+          }
+        }
+      }
+      fclose(pFile);
+      printf("Saved fallback path in %s.\n\n", pathFile);
+      return true;
+    }
 
 };
 
