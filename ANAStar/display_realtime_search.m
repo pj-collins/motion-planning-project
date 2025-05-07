@@ -4,9 +4,9 @@ close all
 clear all
 
 % Define test config to plot
-test_number = 6;
+test_number = 4;
 intercept = true;
-noise = true;
+noise = false;
 
 if intercept
     if noise
